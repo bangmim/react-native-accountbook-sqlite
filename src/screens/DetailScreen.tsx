@@ -1,20 +1,19 @@
 import React, {useCallback, useState} from 'react';
-import {Pressable, ScrollView, Text, View, Image} from 'react-native';
+import {Alert, Pressable, ScrollView, Text, View, Image} from 'react-native';
 import {Header} from '../components/Header/Header';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import {faClose} from '@fortawesome/free-solid-svg-icons';
 import {useRootNavigation, useRootRoute} from '../navigations/RootNavigation';
 import {Spacer} from '../components/Spacer';
-import {SingleLineInput} from '../components/SingleLineInput';
 import {convertToDateString} from '../utils/DateUtils';
-import {MultiLineInput} from '../components/MultiLineInput';
-import {RemoteImage} from '../components/RemoteImage';
 import {AccountBookHistory} from '../data/AccountBookHistory';
+import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
 
 export const DetailScreen: React.FC = () => {
   const navigation = useRootNavigation();
   const routes = useRootRoute<'Detail'>();
   const [item, setItem] = useState<AccountBookHistory>(routes.params.item);
+  const {deleteItem} = useAccountBookHistoryItem();
 
   const onPressUpdate = useCallback(() => {
     navigation.push('Update', {
@@ -23,7 +22,33 @@ export const DetailScreen: React.FC = () => {
         setItem(nextItem);
       },
     });
-  }, [navigation]);
+  }, [navigation, routes.params.item]);
+
+  const onPressDelete = useCallback(() => {
+    if (typeof item.id === 'undefined') {
+      return;
+    }
+
+    Alert.alert(
+      '삭제',
+      '정말 삭제하시겠어요?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteItem(item.id as number);
+            navigation.goBack();
+          },
+        },
+      ],
+      {cancelable: true},
+    );
+  }, [deleteItem, item.id, navigation]);
 
   return (
     <View style={{flex: 1}}>
@@ -171,6 +196,21 @@ export const DetailScreen: React.FC = () => {
               borderRadius: 8,
             }}>
             <Text style={{fontSize: 16, color: 'white'}}>수정하기</Text>
+          </View>
+        </Pressable>
+
+        <Spacer space={16} />
+
+        <Pressable onPress={onPressDelete}>
+          <View
+            style={{
+              paddingVertical: 12,
+              backgroundColor: 'red',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+            }}>
+            <Text style={{fontSize: 16, color: 'white'}}>삭제하기</Text>
           </View>
         </Pressable>
       </ScrollView>

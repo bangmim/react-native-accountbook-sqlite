@@ -23,12 +23,13 @@ export const AccountBookHistoryListItemView: React.FC<{
         }}>
         <FontAwesomeIcon icon={IconStyle} size={24} color={IconColor} />
         <View style={{flex: 1, marginLeft: 12}}>
-          <Text style={{fontSize: 16}}>
-            {props.item.comment} |{props.item.price.toString()}{' '}
-          </Text>
+          <Text style={{fontSize: 16}}>{props.item.price.toString()} </Text>
+          <Text style={{fontSize: 16}}>{props.item.comment}</Text>
           <Spacer space={4} />
           <Text style={{fontSize: 12}}>
-            {convertToDateString(props.item.createdAt)}{' '}
+            {convertToDateString(
+              props.item.date !== 0 ? props.item.date : props.item.createdAt,
+            )}{' '}
           </Text>
         </View>
         {props.item.photoUrl !== null && (

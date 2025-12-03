@@ -24,7 +24,7 @@ export const CalendarSelectScreen: React.FC = () => {
         </Pressable>
       </Header>
       <Calendar
-        onDayPress={day => {
+        onDayPress={(day: any) => {
           routes.params.onSelectDay(day.timestamp);
           navigation.goBack();
         }}
