@@ -1,5 +1,6 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -9,7 +10,7 @@ import {
 } from 'react-native';
 import {Header} from '../components/Header/Header';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
-import {faPlus} from '@fortawesome/free-solid-svg-icons';
+import {faPlus, faTrash} from '@fortawesome/free-solid-svg-icons';
 import {AccountBookHistory} from '../data/AccountBookHistory';
 import {useRootNavigation} from '../navigations/RootNavigation';
 import {AccountBookHistoryListItemView} from '../components/AccountHistoryListItemView';
@@ -18,13 +19,14 @@ import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
 import {useFocusEffect} from '@react-navigation/native';
 import {StackedBarChart} from 'react-native-chart-kit';
 import {convertToDateString} from '../utils/DateUtils';
+import {RectButton, Swipeable} from 'react-native-gesture-handler';
 
 export const MainScreen: React.FC = () => {
   const safeAreaInset = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const navigation = useRootNavigation();
   const [list, setList] = useState<AccountBookHistory[]>([]);
-  const {getList} = useAccountBookHistoryItem();
+  const {getList, deleteItem} = useAccountBookHistoryItem();
 
   const fetchList = useCallback(async () => {
     const data = await getList();
@@ -118,74 +120,102 @@ export const MainScreen: React.FC = () => {
     // 최신 날짜 순으로 정렬
     return Array.from(map.values()).sort((a, b) => b.date - a.date);
   }, [list]);
+
+  const handleDelete = useCallback(
+    (history: AccountBookHistory) => {
+      if (typeof history.id === 'undefined') {
+        return;
+      }
+      Alert.alert('삭제', '해당 내역을 삭제하시겠어요?', [
+        {text: '취소', style: 'cancel'},
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteItem(history.id as number);
+            fetchList();
+          },
+        },
+      ]);
+    },
+    [deleteItem, fetchList],
+  );
   return (
     <View style={{flex: 1}}>
       <Header>
         <Header.Title title="Main SCREEN"></Header.Title>
       </Header>
-
+      <View>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+          }}>
+          <Text style={{fontSize: 18, fontWeight: '600'}}>
+            일별 통계 (
+            {new Date().toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+            })}
+            , 단위: 천원)
+          </Text>
+          <Pressable
+            onPress={() => {
+              if (list.length === 0) {
+                Alert.alert('알림', '표시할 데이터가 없습니다.');
+                return;
+              }
+              navigation.push('MonthlyAverage');
+            }}>
+            <Text style={{color: 'blue', fontSize: 14}}>자세히 보기</Text>
+          </Pressable>
+        </View>
+        {dailyChart.hasData ? (
+          <ScrollView
+            horizontal
+            style={{backgroundColor: 'lightgray'}}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingVertical: 8,
+            }}>
+            <StackedBarChart
+              data={{
+                labels: dailyChart.labels,
+                legend: ['사용', '수입'],
+                data: dailyChart.data,
+                // 같은 날짜에 지출/수입이 모두 있는 경우
+                // 하나의 막대 안에서 색으로 구분되도록 대비되는 색상 사용
+                barColors: ['#ff6b6b', '#4ecdc4'],
+              }}
+              hideLegend
+              width={Math.max(width, dailyChart.labels.length * 40)}
+              height={220}
+              chartConfig={{
+                backgroundColor: 'white',
+                backgroundGradientFrom: 'lightgray',
+                backgroundGradientTo: 'gray',
+                color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+                decimalPlaces: 0,
+              }}
+            />
+          </ScrollView>
+        ) : (
+          <View
+            style={{
+              height: 220,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Text>이번 달 일별 데이터가 없습니다.</Text>
+          </View>
+        )}
+      </View>
       <FlatList
         data={dailyGroups}
-        ListHeaderComponent={
-          <View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-              }}>
-              <Text style={{fontSize: 18, fontWeight: '600'}}>
-                일별 통계 (이번 달, 단위: 천원)
-              </Text>
-              <Pressable
-                onPress={() => {
-                  navigation.push('MonthlyAverage');
-                }}>
-                <Text style={{color: 'blue', fontSize: 14}}>자세히 보기</Text>
-              </Pressable>
-            </View>
-            {dailyChart.hasData ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  paddingVertical: 8,
-                }}>
-                <StackedBarChart
-                  data={{
-                    labels: dailyChart.labels,
-                    legend: ['사용', '수입'],
-                    data: dailyChart.data,
-                    // 같은 날짜에 지출/수입이 모두 있는 경우
-                    // 하나의 막대 안에서 색으로 구분되도록 대비되는 색상 사용
-                    barColors: ['#ff6b6b', '#4ecdc4'],
-                  }}
-                  hideLegend
-                  width={Math.max(width, dailyChart.labels.length * 40)}
-                  height={220}
-                  chartConfig={{
-                    backgroundColor: 'white',
-                    backgroundGradientFrom: 'lightgray',
-                    backgroundGradientTo: 'gray',
-                    color: (opacity = 1) => `rgba(0,0,0,${opacity})`,
-                    decimalPlaces: 0,
-                  }}
-                />
-              </ScrollView>
-            ) : (
-              <View
-                style={{
-                  height: 220,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Text>이번 달 일별 데이터가 없습니다.</Text>
-              </View>
-            )}
-          </View>
-        }
+        // ListHeaderComponent={}
         keyExtractor={item => item.key}
         renderItem={({item}) => {
           const dateLabel = convertToDateString(item.date).split(' ')[0];
@@ -207,14 +237,34 @@ export const MainScreen: React.FC = () => {
               </View>
 
               {item.items.map(history => (
-                <AccountBookHistoryListItemView
+                <Swipeable
                   key={history.id ?? `${history.createdAt}-${history.comment}`}
-                  item={history}
-                  onPressItem={clicked => {
-                    console.log('clickedItem', clicked);
-                    navigation.push('Detail', {item: clicked});
-                  }}
-                />
+                  renderRightActions={() => (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}>
+                      <RectButton
+                        style={{
+                          width: 80,
+                          backgroundColor: 'red',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                        onPress={() => handleDelete(history)}>
+                        <FontAwesomeIcon icon={faTrash} size={20} color="red" />
+                      </RectButton>
+                    </View>
+                  )}>
+                  <AccountBookHistoryListItemView
+                    item={history}
+                    onPressItem={clicked => {
+                      console.log('clickedItem', clicked);
+                      navigation.push('Detail', {item: clicked});
+                    }}
+                  />
+                </Swipeable>
               ))}
             </View>
           );
