@@ -1,5 +1,13 @@
 import React, {useCallback, useState} from 'react';
-import {Alert, Image, Pressable, ScrollView, Text, View} from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import {Header} from '../components/Header/Header';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import {faClose, faPlus} from '@fortawesome/free-solid-svg-icons';
@@ -10,6 +18,9 @@ import {SingleLineInput} from '../components/SingleLineInput';
 import {convertToDateString} from '../utils/DateUtils';
 import {MultiLineInput} from '../components/MultiLineInput';
 import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
+import {CalendarSelectScreen} from './CalendarSelectScreen';
 
 export const AddUpdateScreen: React.FC = () => {
   const navigation = useRootNavigation<'Add' | 'Update'>();
@@ -18,7 +29,7 @@ export const AddUpdateScreen: React.FC = () => {
   const {insertItem, updateItem} = useAccountBookHistoryItem();
 
   const [item, setItem] = useState<AccountBookHistory>(
-    routes.params?.item ?? {
+    (routes.params && 'item' in routes.params ? routes.params.item : null) ?? {
       type: '사용',
       price: 0,
       comment: '',
@@ -84,17 +95,26 @@ export const AddUpdateScreen: React.FC = () => {
       },
     ]);
   }, [navigation]);
-
+  const [modalVisible, setModalVisible] = useState(false);
   const onPressCalandar = useCallback(() => {
-    navigation.push('CalendarSelect', {
-      onSelectDay: date => {
+    console.log('!!!!onPressCalandar!!!');
+    setModalVisible(true);
+    // navigation.navigate('CalendarSelect', {});
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const params = routes.params as any;
+      if (params?.selectedDate) {
         setItem(prevState => ({
           ...prevState,
-          date: date,
+          date: params.selectedDate,
         }));
-      },
-    });
-  }, [navigation]);
+        // Clear the selectedDate after using it
+        navigation.setParams({...params, selectedDate: undefined} as any);
+      }
+    }, [routes.params, navigation]),
+  );
 
   const onChangeComment = useCallback<(text: string) => void>(text => {
     setItem(prevState => ({
@@ -110,18 +130,20 @@ export const AddUpdateScreen: React.FC = () => {
 
     if (routes.name === 'Update') {
       updateItem(item).then(updateItem => {
-        console.log('!!!!updateItem!!!', updateItem);
-        routes.params?.onChangeData(updateItem);
-
+        if (routes.params && 'onChangeData' in routes.params) {
+          routes.params.onChangeData(updateItem);
+        }
         navigation.goBack();
       });
     }
   }, [insertItem, item, navigation, routes.name, routes.params, updateItem]);
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
-        <Header.Title title="Add/Update SCREEN"></Header.Title>
+        <Header.Title
+          title={routes.name === 'Add' ? '내역 추가' : '내역 수정'}
+        />
         <Pressable
           onPress={() => {
             navigation.goBack();
@@ -265,7 +287,23 @@ export const AddUpdateScreen: React.FC = () => {
             </Text>
           </View>
         </Pressable>
+        <Modal
+          visible={modalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}>
+          <CalendarSelectScreen
+            onSelectDate={date => {
+              setItem(prevState => ({
+                ...prevState,
+                date: date,
+              }));
+              setModalVisible(false);
+            }}
+            onClose={() => setModalVisible(false)}
+          />
+        </Modal>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };

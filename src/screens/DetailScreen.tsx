@@ -1,13 +1,13 @@
 import React, {useCallback, useState} from 'react';
 import {Alert, Pressable, ScrollView, Text, View, Image} from 'react-native';
 import {Header} from '../components/Header/Header';
-import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import {faClose} from '@fortawesome/free-solid-svg-icons';
 import {useRootNavigation, useRootRoute} from '../navigations/RootNavigation';
 import {Spacer} from '../components/Spacer';
 import {convertToDateString} from '../utils/DateUtils';
 import {AccountBookHistory} from '../data/AccountBookHistory';
 import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 export const DetailScreen: React.FC = () => {
   const navigation = useRootNavigation();
@@ -51,15 +51,10 @@ export const DetailScreen: React.FC = () => {
   }, [deleteItem, item.id, navigation]);
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
-        <Header.Title title="Detail SCREEN"></Header.Title>
-        <Pressable
-          onPress={() => {
-            navigation.goBack();
-          }}>
-          <FontAwesomeIcon icon={faClose} size={20} />
-        </Pressable>
+        <Header.Title title="내역 상세" />
+        <Header.Icon iconName={faClose} onPress={() => navigation.goBack()} />
       </Header>
 
       <ScrollView
@@ -214,6 +209,6 @@ export const DetailScreen: React.FC = () => {
           </View>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };

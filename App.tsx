@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import {NavigationContainer} from '@react-navigation/native';
 import React from 'react';
 import {StatusBar, useColorScheme} from 'react-native';

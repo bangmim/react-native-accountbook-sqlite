@@ -1,0 +1,199 @@
+import {useState, useEffect} from 'react';
+import {Session, User} from '@supabase/supabase-js';
+import {supabase} from '../config/supabase';
+
+export const useAuth = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // supabase가 제대로 초기화되지 않았을 때 처리
+    if (!supabase || !supabase.auth) {
+      console.warn('Supabase is not properly initialized');
+      setLoading(false);
+      return;
+    }
+
+    // 초기 세션 확인
+    supabase.auth
+      .getSession()
+      .then((response: any) => {
+        if (response && response.data) {
+          setSession(response.data.session);
+          setUser(response.data.session?.user ?? null);
+        } else if (response && response.session) {
+          // 다른 형태의 응답 구조 처리
+          setSession(response.session);
+          setUser(response.session?.user ?? null);
+        }
+        setLoading(false);
+      })
+      .catch((error: any) => {
+        console.error('Failed to get session:', error);
+        setLoading(false);
+      });
+
+    // 인증 상태 변경 리스너
+    let subscription: any = null;
+    try {
+      const authStateChangeResponse = supabase.auth.onAuthStateChange(
+        (_event: any, session: any) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        },
+      );
+      if (authStateChangeResponse && authStateChangeResponse.data) {
+        subscription = authStateChangeResponse.data.subscription;
+      }
+    } catch (error) {
+      console.error('Failed to set up auth state listener:', error);
+      setLoading(false);
+    }
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    if (!supabase || !supabase.auth) {
+      return {data: null, error: {message: 'Supabase not configured'}};
+    }
+    try {
+      const {data, error} = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return {data, error};
+    } catch (error: any) {
+      return {data: null, error: {message: error.message || 'Sign in failed'}};
+    }
+  };
+
+  // 아이디로 이메일 찾기
+  const findEmailByUsername = async (username: string) => {
+    if (!supabase) {
+      return {data: null, error: {message: 'Supabase not configured'}};
+    }
+    try {
+      // .single() 대신 .maybeSingle() 사용 (결과가 없어도 에러 발생 안함)
+      // 보안: username_lookup 뷰 사용 (email만 노출)
+      const {data, error} = await supabase
+        .from('username_lookup')
+        .select('email')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (error) {
+        console.error('findEmailByUsername error:', error);
+        return {data: null, error};
+      }
+
+      // 데이터가 없으면 에러 반환
+      if (!data) {
+        return {
+          data: null,
+          error: {message: '아이디를 찾을 수 없습니다.'},
+        };
+      }
+
+      return {data, error: null};
+    } catch (error: any) {
+      console.error('findEmailByUsername exception:', error);
+      return {data: null, error: {message: error.message || 'User not found'}};
+    }
+  };
+
+  // 아이디로 로그인
+  const signInWithUsername = async (username: string, password: string) => {
+    const {data: userData, error: findError} = await findEmailByUsername(
+      username,
+    );
+    if (findError || !userData) {
+      return {
+        data: null,
+        error: {message: '아이디를 찾을 수 없습니다.'},
+      };
+    }
+    return signIn(userData.email, password);
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    username: string,
+    nickname?: string,
+  ) => {
+    if (!supabase || !supabase.auth) {
+      return {data: null, error: {message: 'Supabase not configured'}};
+    }
+    try {
+      // 1. Supabase Auth에 회원가입
+      const {data: authData, error: authError} = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nickname: nickname || '',
+            username: username,
+          },
+        },
+      });
+
+      if (authError || !authData.user) {
+        return {data: null, error: authError || {message: 'Sign up failed'}};
+      }
+
+      // 2. users 테이블에 아이디-이메일 매핑 저장
+      const {error: dbError} = await supabase.from('users').insert({
+        id: authData.user.id,
+        username: username,
+        email: email,
+        nickname: nickname || '',
+      });
+
+      if (dbError) {
+        // users 테이블 저장 실패 시 에러 반환
+        console.error('Failed to save username mapping:', dbError);
+        return {
+          data: null,
+          error: {
+            message:
+              '회원가입은 완료되었지만 사용자 정보 저장에 실패했습니다. 관리자에게 문의하세요.',
+          },
+        };
+      }
+
+      return {data: authData, error: null};
+    } catch (error: any) {
+      return {data: null, error: {message: error.message || 'Sign up failed'}};
+    }
+  };
+
+  const signOut = async () => {
+    if (!supabase || !supabase.auth) {
+      return {error: null};
+    }
+    try {
+      const {error} = await supabase.auth.signOut();
+      return {error};
+    } catch (error: any) {
+      return {error: {message: error.message || 'Sign out failed'}};
+    }
+  };
+
+  return {
+    session,
+    user,
+    loading,
+    signIn,
+    signInWithUsername,
+    signUp,
+    signOut,
+    isAuthenticated: !!session,
+  };
+};

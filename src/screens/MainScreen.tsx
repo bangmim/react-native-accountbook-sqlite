@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import {Header} from '../components/Header/Header';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
-import {faPlus, faTrash} from '@fortawesome/free-solid-svg-icons';
+import {faPlus, faTrash, faSignOutAlt} from '@fortawesome/free-solid-svg-icons';
 import {AccountBookHistory} from '../data/AccountBookHistory';
 import {useRootNavigation} from '../navigations/RootNavigation';
 import {AccountBookHistoryListItemView} from '../components/AccountHistoryListItemView';
@@ -20,11 +20,13 @@ import {useFocusEffect} from '@react-navigation/native';
 import {StackedBarChart} from 'react-native-chart-kit';
 import {convertToDateString} from '../utils/DateUtils';
 import {RectButton, Swipeable} from 'react-native-gesture-handler';
+import {useAuth} from '../hooks/useAuth';
 
 export const MainScreen: React.FC = () => {
   const safeAreaInset = useSafeAreaInsets();
   const {width} = useWindowDimensions();
   const navigation = useRootNavigation();
+  const {signOut} = useAuth();
   const [list, setList] = useState<AccountBookHistory[]>([]);
   const {getList, deleteItem} = useAccountBookHistoryItem();
   const swipeableRefs = useRef<Map<string, Swipeable | null>>(
@@ -142,10 +144,26 @@ export const MainScreen: React.FC = () => {
     },
     [deleteItem, fetchList],
   );
+  const handleLogout = useCallback(async () => {
+    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
+      {text: '취소', style: 'cancel'},
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+        },
+      },
+    ]);
+  }, [signOut]);
+
   return (
     <SafeAreaView style={{flex: 1}}>
       <Header>
-        <Header.Title title="Main SCREEN"></Header.Title>
+        <Header.Title title="가계부" />
+        <Pressable onPress={handleLogout}>
+          <FontAwesomeIcon icon={faSignOutAlt} size={20} color="gray" />
+        </Pressable>
       </Header>
       <View>
         <View
@@ -300,7 +318,7 @@ export const MainScreen: React.FC = () => {
           bottom: 12 + safeAreaInset.bottom,
         }}
         onPress={() => {
-          navigation.push('Add');
+          navigation.push('Add', {});
         }}>
         <View
           style={{
