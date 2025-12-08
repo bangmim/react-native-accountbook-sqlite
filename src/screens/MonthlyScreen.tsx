@@ -14,6 +14,7 @@ import {StackedBarChart} from 'react-native-chart-kit';
 import {useRootNavigation} from '../navigations/RootNavigation';
 import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
 import {AccountBookHistory} from '../data/AccountBookHistory';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 type MonthlySummary = {
   key: string;
@@ -127,7 +128,7 @@ export const MonthlyScreen: React.FC = () => {
   }, [buildMonthlyData, getList]);
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
         <Header.Title title="MonthlyScreen (단위: 천원)"></Header.Title>
         <Pressable
@@ -261,6 +262,6 @@ export const MonthlyScreen: React.FC = () => {
           </View>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };

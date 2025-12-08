@@ -8,6 +8,7 @@ import {Spacer} from '../components/Spacer';
 import {convertToDateString} from '../utils/DateUtils';
 import {AccountBookHistory} from '../data/AccountBookHistory';
 import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 export const DetailScreen: React.FC = () => {
   const navigation = useRootNavigation();
@@ -51,7 +52,7 @@ export const DetailScreen: React.FC = () => {
   }, [deleteItem, item.id, navigation]);
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
         <Header.Title title="Detail SCREEN"></Header.Title>
         <Pressable
@@ -214,6 +215,6 @@ export const DetailScreen: React.FC = () => {
           </View>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };

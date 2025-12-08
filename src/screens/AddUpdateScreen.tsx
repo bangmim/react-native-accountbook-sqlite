@@ -10,6 +10,7 @@ import {SingleLineInput} from '../components/SingleLineInput';
 import {convertToDateString} from '../utils/DateUtils';
 import {MultiLineInput} from '../components/MultiLineInput';
 import {useAccountBookHistoryItem} from '../hooks/useAccountBookHistoryItem';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 export const AddUpdateScreen: React.FC = () => {
   const navigation = useRootNavigation<'Add' | 'Update'>();
@@ -44,9 +45,11 @@ export const AddUpdateScreen: React.FC = () => {
     [routes.name],
   );
   const onChangePrice = useCallback<(text: string) => void>(text => {
+    // 빈 문자열이거나 숫자가 아닌 경우 0으로 설정
+    const numValue = text === '' ? 0 : parseInt(text, 10);
     setItem(prevState => ({
       ...prevState,
-      price: parseInt(text),
+      price: isNaN(numValue) ? 0 : numValue,
     }));
   }, []);
 
@@ -119,7 +122,7 @@ export const AddUpdateScreen: React.FC = () => {
   }, [insertItem, item, navigation, routes.name, routes.params, updateItem]);
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
         <Header.Title title="Add/Update SCREEN"></Header.Title>
         <Pressable
@@ -266,6 +269,6 @@ export const AddUpdateScreen: React.FC = () => {
           </View>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };

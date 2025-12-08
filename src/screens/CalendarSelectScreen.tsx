@@ -1,11 +1,12 @@
 import React from 'react';
-import {Pressable, View} from 'react-native';
+import {Pressable} from 'react-native';
 import {Header} from '../components/Header/Header';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import {faX} from '@fortawesome/free-solid-svg-icons';
 import {useRootNavigation, useRootRoute} from '../navigations/RootNavigation';
 import {Calendar} from 'react-native-calendars';
 import {convertToDateString} from '../utils/DateUtils';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 const today = new Date();
 today.setHours(0);
@@ -16,7 +17,7 @@ export const CalendarSelectScreen: React.FC = () => {
   const routes = useRootRoute<'CalendarSelect'>();
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Header>
         <Header.Title title="날짜 선택" />
         <Pressable onPress={navigation.goBack}>
@@ -29,6 +30,6 @@ export const CalendarSelectScreen: React.FC = () => {
           navigation.goBack();
         }}
         maxDate={convertToDateString(today.getTime())}></Calendar>
-    </View>
+    </SafeAreaView>
   );
 };
